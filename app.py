@@ -56,19 +56,17 @@ def precipitation():
     results = session.query(Measurement.date, Measurement.prcp).\
         filter(Measurement.date >= month_length).\
         order_by(Measurement.date.desc()).all()
-# convert to normal list
-    list_results = list(np.ravel(results))
-#results
-    msr_date = [result[0] for result in results[:365]]
-    prcp_msr = [str(result[1]) for result in results[:365]]
+    
+    session.close
 
-    session.close()
+    all_measurements = []
+    for date, prcp in results:
+        measurement_dict = {}
+        measurement_dict["date"] = date
+        measurement_dict["precipitation"] = prcp
+        all_measurements.append(measurement_dict)
 
-    # Convert list of tuples into normal list
-    dict_create = [{msr_date : prcp_msr}]
-
-    return jsonify(dict_create)
-
+    return jsonify(all_measurements)
 
 @app.route("/api/v1.0/stations")
 def stations():
@@ -87,12 +85,13 @@ def stations():
 
 @app.route("/api/v1.0/tobs")
 def tobs():
+
     # Create our session (link) from Python to the DB
     session = Session(engine)
 
     month_length = dt.date(2017,8,23) - dt.timedelta(days=365)
     
-    station_12count = session.query(Measurement.tobs).\
+    station_12count = session.query(Measurement.date, Measurement.tobs).\
                 filter(Measurement.station=='USC00519281').\
                 filter(Measurement.date >= month_length).all()
 
@@ -102,7 +101,33 @@ def tobs():
 
     return jsonify(form_correct)
 
-    #how to add date side-by-side
+@app.route("/api/v1.0/<start>")
+def date_test(start):
+#   Create our session (link) from Python to the D
+    session = Session(engine)
+
+# Perform a query to retrieve the data and precipitation scores
+    results = session.query(Measurement.date, Measurement.prcp)
+    
+    session.close
+
+    all_measurements = []
+    for date, prcp in results:
+        measurement_dict = {}
+        measurement_dict["date"] = date
+        measurement_dict["precipitation"] = prcp
+        all_measurements.append(measurement_dict)
+
+    canonicalized = date
+    for test_date in all_measurements:
+        search_term = test_date["date"]
+
+        if search_term == canonicalized:
+            return jsonify(test_date)
+
+    # results = session.query(func.min(Measurement.tobs),func.max(Measurement.tobs), func.avg(Measurement.tobs)).\
+    #         filter(Measurement.date=='USC00519281').all()
+
 
 if __name__ == '__main__':
     app.run(debug=True)
